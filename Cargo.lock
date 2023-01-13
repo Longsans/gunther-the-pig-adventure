@@ -1789,7 +1789,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gunther-adv"
+name = "gunther_adv"
 version = "0.1.0"
 dependencies = [
  "bevy",

@@ -1,3 +1,4 @@
+use crate::arcade_game::rigid_body::Collider;
 use crate::arcade_game::sprite_sheets::{
     MapSpriteSheet, MAP_SPRITE_SHEET_PATH, MAP_TILES, MAP_TILE_SIZE,
 };
@@ -33,6 +34,30 @@ struct MapConfig {
 impl MapConfig {
     fn tile_size(&self) -> Vec2 {
         self.wall_scale * MAP_TILE_SIZE
+    }
+}
+
+#[derive(Component)]
+pub struct Wall;
+
+impl Wall {
+    const DEFAULT_NAME: &str = "Wall";
+}
+
+#[derive(Bundle)]
+struct WallBundle {
+    collider: Collider,
+    sprite: SpriteSheetBundle,
+    wall: Wall,
+}
+
+impl Default for WallBundle {
+    fn default() -> Self {
+        Self {
+            collider: Collider::default(),
+            sprite: SpriteSheetBundle::default(),
+            wall: Wall,
+        }
     }
 }
 
@@ -122,16 +147,27 @@ fn spawn_tiles(
     transform: Transform,
 ) -> Entity {
     commands
-        .spawn(SpriteSheetBundle {
-            texture_atlas: sprite_sheet.map_tiles.clone(),
-            sprite: TextureAtlasSprite {
-                index: map_config.wall_tile_index,
-                custom_size: Some(map_config.tile_size()),
+        .spawn(WallBundle {
+            collider: Collider {
+                min: Vec2::new(transform.translation.x, transform.translation.y)
+                    - map_config.tile_size() / 2.,
+                max: Vec2::new(transform.translation.x, transform.translation.y)
+                    + map_config.tile_size() / 2.,
+                extent: map_config.tile_size() / 2.,
                 ..default()
             },
-            transform,
+            sprite: SpriteSheetBundle {
+                texture_atlas: sprite_sheet.map_tiles.clone(),
+                sprite: TextureAtlasSprite {
+                    index: map_config.wall_tile_index,
+                    custom_size: Some(map_config.tile_size()),
+                    ..default()
+                },
+                transform,
+                ..default()
+            },
             ..default()
         })
-        .insert(Name::from("Wall"))
+        .insert(Name::from(Wall::DEFAULT_NAME))
         .id()
 }
