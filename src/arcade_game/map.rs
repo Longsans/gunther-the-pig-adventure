@@ -1,8 +1,8 @@
-use crate::arcade_game::rigid_body::Collider;
 use crate::arcade_game::sprite_sheets::{
     MapSpriteSheet, MAP_SPRITE_SHEET_PATH, MAP_TILES, MAP_TILE_SIZE,
 };
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 pub struct MapPlugin;
 
@@ -146,16 +146,10 @@ fn spawn_tiles(
     map_config: &MapConfig,
     transform: Transform,
 ) -> Entity {
+    let half_extent = map_config.tile_size() / 2.0;
     commands
         .spawn(WallBundle {
-            collider: Collider {
-                min: Vec2::new(transform.translation.x, transform.translation.y)
-                    - map_config.tile_size() / 2.,
-                max: Vec2::new(transform.translation.x, transform.translation.y)
-                    + map_config.tile_size() / 2.,
-                extent: map_config.tile_size() / 2.,
-                ..default()
-            },
+            collider: Collider::cuboid(half_extent.x, half_extent.y),
             sprite: SpriteSheetBundle {
                 texture_atlas: sprite_sheet.map_tiles.clone(),
                 sprite: TextureAtlasSprite {
