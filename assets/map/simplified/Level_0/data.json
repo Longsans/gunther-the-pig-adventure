@@ -1,0 +1,29 @@
+{
+	"identifier": "Level_0",
+	"uniqueIdentifer": "01fadbe0-7820-11ed-a768-c33cc0b35cad",
+	"x": 0,
+	"y": 0,
+	"width": 256,
+	"height": 256,
+	"bgColor": "#000000",
+	"neighbourLevels": [],
+	"customFields" : {},
+	"layers": [
+		"Environment.png"
+	],
+	"entities": {
+		"Player": [
+			{
+				"id": "Player",
+				"iid": "87d67540-7820-11ed-a768-c73e3c0b3b06",
+				"layer": "Entities",
+				"x": 132,
+				"y": 36,
+				"width": 8,
+				"height": 8,
+				"color": 39387,
+				"customFields" : {}
+			}
+		]
+	}
+}

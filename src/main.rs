@@ -22,6 +22,7 @@ fn main() {
                     },
                     ..default()
                 })
+                .set(ImagePlugin::default_nearest())
                 .set(LogPlugin {
                     filter: "info,wgpu_core=warn,wgpu_hal=error,gunther_adv=debug".into(),
                     level: bevy::log::Level::DEBUG,

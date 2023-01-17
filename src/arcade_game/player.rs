@@ -1,64 +1,41 @@
+use crate::arcade_game::character::*;
 use crate::arcade_game::combat::{Damage, HitPoint};
 use crate::arcade_game::physics::Moveable;
-use crate::arcade_game::sprite_sheets::{
-    ObjectsSpriteSheet, OBJ_SPRITE_SHEET_PATH, OBJ_TILES, OBJ_TILE_OFFSET, OBJ_TILE_PADDING,
-    OBJ_TILE_SIZE,
-};
+use crate::arcade_game::physics::PhysicsSystem;
 use crate::arcade_game::GameSystem;
 use bevy::prelude::*;
+use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
-
-use crate::arcade_game::physics::{Character, CharacterBundle, PhysicsSystem};
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ObjectsSpriteSheet::default())
-            .insert_resource(PlayerTileIndex::PIG)
-            .add_startup_system_set(
-                SystemSet::new()
-                    .with_system(prep_resources.label(PlayerSystem::Resources))
-                    .with_system(
-                        spawn_player
-                            .label(PlayerSystem::Player)
-                            .after(PlayerSystem::Resources),
-                    ),
-            )
-            .add_system_set(
-                SystemSet::new().with_system(
-                    handle_input
-                        .label(GameSystem::Input)
-                        .label(PhysicsSystem::Local),
-                ),
-            );
+        app.add_system_set(
+            SystemSet::new().with_system(
+                handle_input
+                    .label(GameSystem::Input)
+                    .label(PhysicsSystem::Local),
+            ),
+        );
     }
 }
 
-#[derive(SystemLabel)]
-enum PlayerSystem {
-    Resources,
-    Player,
-}
-
-#[derive(Resource)]
-struct PlayerTileIndex(usize);
-
-impl PlayerTileIndex {
-    const PIG: Self = PlayerTileIndex(25);
-}
-
-#[derive(Component)]
+#[derive(Component, Default)]
 struct Player;
 
-#[derive(Bundle)]
-struct PlayerBundle {
+#[derive(Bundle, LdtkEntity)]
+pub struct PlayerBundle {
+    #[sprite_sheet_bundle]
+    #[bundle]
     sprite_bundle: SpriteSheetBundle,
+    #[from_entity_instance]
+    #[bundle]
+    character_bundle: CharacterBundle,
+    player: Player,
+    name: Name,
     hp: HitPoint,
     dmg: Damage,
-    name: Name,
-    player: Player,
-    character_bundle: CharacterBundle,
 }
 
 impl Default for PlayerBundle {
@@ -83,57 +60,11 @@ impl Default for PlayerBundle {
 }
 
 impl PlayerBundle {
-    const DEFAULT_NAME: &str = "Player";
-    const DEFAULT_SCALE: f32 = 2.;
-    const DEFAULT_MOVE_SPEED: f32 = 1.;
-    const DEFAULT_TRANSFORM: Transform = Transform::IDENTITY;
-    const JUMP_FORCE: f32 = 50.0;
-
-    fn default_size() -> Vec2 {
-        Self::DEFAULT_SCALE * OBJ_TILE_SIZE
-    }
-}
-
-fn prep_resources(
-    mut sprite_sheet: ResMut<ObjectsSpriteSheet>,
-    asset_server: Res<AssetServer>,
-    mut tex_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let tex_handle = asset_server.load(OBJ_SPRITE_SHEET_PATH);
-    let atlas = TextureAtlas::from_grid(
-        tex_handle,
-        OBJ_TILE_SIZE,
-        OBJ_TILES.rows,
-        OBJ_TILES.cols,
-        Some(OBJ_TILE_PADDING),
-        Some(OBJ_TILE_OFFSET),
-    );
-    sprite_sheet.obj_tiles = tex_atlases.add(atlas);
-}
-
-fn spawn_player(
-    mut commands: Commands,
-    sprite_sheet: Res<ObjectsSpriteSheet>,
-    tile_index: Res<PlayerTileIndex>,
-) {
-    let half_extent = PlayerBundle::default_size() / 2.;
-    commands.spawn(PlayerBundle {
-        sprite_bundle: SpriteSheetBundle {
-            sprite: TextureAtlasSprite {
-                index: tile_index.0,
-                custom_size: Some(PlayerBundle::DEFAULT_SCALE * OBJ_TILE_SIZE),
-                ..default()
-            },
-            texture_atlas: sprite_sheet.obj_tiles.clone(),
-            transform: PlayerBundle::DEFAULT_TRANSFORM,
-            ..default()
-        },
-        character_bundle: CharacterBundle {
-            collider: Collider::cuboid(half_extent.x, half_extent.y),
-            ..PlayerBundle::default().character_bundle
-        },
-        ..default()
-    });
+    pub const DEFAULT_NAME: &str = "Player";
+    pub const DEFAULT_SCALE: f32 = 1.;
+    pub const DEFAULT_MOVE_SPEED: f32 = 0.5;
+    pub const DEFAULT_TRANSFORM: Transform = Transform::IDENTITY;
+    pub const JUMP_FORCE: f32 = 100.0;
 }
 
 fn handle_input(
@@ -141,7 +72,7 @@ fn handle_input(
     mut q_moveable: Query<
         (
             &Moveable,
-            &mut Character,
+            &mut Velocity,
             &mut KinematicCharacterController,
             Option<&KinematicCharacterControllerOutput>,
             &mut TextureAtlasSprite,
@@ -152,13 +83,9 @@ fn handle_input(
     if q_moveable.is_empty() {
         return;
     }
-    let (moveable, mut char, mut controller, controller_output, mut sprite) =
+    let (moveable, mut velocity, mut controller, controller_output, mut sprite) =
         q_moveable.single_mut();
 
-    let grounded = match controller_output {
-        Some(output) => output.grounded,
-        None => false,
-    };
     let mut direction = Vec2::ZERO;
     if kb_input.pressed(KeyCode::A) || kb_input.pressed(KeyCode::Left) {
         direction.x -= 1.;
@@ -171,10 +98,15 @@ fn handle_input(
         controller.translation = match controller.translation {
             Some(translation) => Some(translation + moveable.speed * direction),
             None => Some(moveable.speed * direction),
-        }
+        };
     }
+
+    let grounded = match controller_output {
+        Some(output) => output.grounded,
+        None => false,
+    };
     if kb_input.just_pressed(KeyCode::Space) && grounded {
-        char.jump(&mut controller, PlayerBundle::JUMP_FORCE);
+        velocity.linvel.y = PlayerBundle::JUMP_FORCE;
     }
 }
 
