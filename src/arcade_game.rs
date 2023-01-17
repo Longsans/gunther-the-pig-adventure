@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_rapier2d::prelude::*;
 use character::CharacterPlugin;
 use ldtk::LdtkMapBackendPlugin;
 use physics::PhysicsPlugin;
@@ -28,8 +27,6 @@ pub struct ArcadeGame;
 impl Plugin for ArcadeGame {
     fn build(&self, app: &mut App) {
         app.add_plugin(WorldInspectorPlugin)
-            .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-            // .add_plugin(RapierDebugRenderPlugin::default())
             .add_plugin(LdtkMapBackendPlugin)
             .add_plugin(CharacterPlugin)
             .add_plugin(PlayerPlugin)

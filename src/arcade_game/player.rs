@@ -1,7 +1,6 @@
 use crate::arcade_game::character::*;
 use crate::arcade_game::combat::{Damage, HitPoint};
-use crate::arcade_game::physics::Moveable;
-use crate::arcade_game::physics::PhysicsSystem;
+use crate::arcade_game::physics::{Moveable, PhysicsSystem};
 use crate::arcade_game::GameSystem;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
@@ -11,13 +10,15 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::new().with_system(
-                handle_input
-                    .label(GameSystem::Input)
-                    .label(PhysicsSystem::Local),
-            ),
-        );
+        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+            .add_plugin(RapierDebugRenderPlugin::default())
+            .add_system_set(
+                SystemSet::new().with_system(
+                    handle_input
+                        .label(GameSystem::Input)
+                        .label(PhysicsSystem::Local),
+                ),
+            );
     }
 }
 
@@ -62,50 +63,47 @@ impl Default for PlayerBundle {
 impl PlayerBundle {
     pub const DEFAULT_NAME: &str = "Player";
     pub const DEFAULT_SCALE: f32 = 1.;
-    pub const DEFAULT_MOVE_SPEED: f32 = 0.5;
+    pub const DEFAULT_MOVE_SPEED: f32 = 50.0;
     pub const DEFAULT_TRANSFORM: Transform = Transform::IDENTITY;
-    pub const JUMP_FORCE: f32 = 100.0;
+    pub const JUMP_FORCE: f32 = 50.0;
 }
 
 fn handle_input(
     kb_input: Res<Input<KeyCode>>,
-    mut q_moveable: Query<
+    mut player: Query<
         (
             &Moveable,
+            &mut Character,
+            &mut Transform,
             &mut Velocity,
-            &mut KinematicCharacterController,
-            Option<&KinematicCharacterControllerOutput>,
             &mut TextureAtlasSprite,
         ),
         With<Player>,
     >,
 ) {
-    if q_moveable.is_empty() {
+    if player.is_empty() {
         return;
     }
-    let (moveable, mut velocity, mut controller, controller_output, mut sprite) =
-        q_moveable.single_mut();
-
-    let mut direction = Vec2::ZERO;
+    let (moveable, character, mut transform, mut velocity, mut sprite) = player.single_mut();
+    // velocity.linvel.x = 0.0;
+    let mut movement = 0.0;
     if kb_input.pressed(KeyCode::A) || kb_input.pressed(KeyCode::Left) {
-        direction.x -= 1.;
+        // velocity.linvel.x -= moveable.speed;
+        movement -= moveable.speed * 0.005;
     }
     if kb_input.pressed(KeyCode::D) || kb_input.pressed(KeyCode::Right) {
-        direction.x += 1.;
+        // velocity.linvel.x += moveable.speed;
+        movement += moveable.speed * 0.005;
     }
-    if direction != Vec2::ZERO {
-        turn_player_direction(&mut sprite, direction);
-        controller.translation = match controller.translation {
-            Some(translation) => Some(translation + moveable.speed * direction),
-            None => Some(moveable.speed * direction),
-        };
+    if transform.translation.x != 0.0 {
+        turn_player_direction(&mut sprite, movement * Vec2::X);
+        // turn_player_direction(&mut sprite, velocity.linvel);
+        transform.translation.x += movement;
     }
 
-    let grounded = match controller_output {
-        Some(output) => output.grounded,
-        None => false,
-    };
-    if kb_input.just_pressed(KeyCode::Space) && grounded {
+    if kb_input.just_pressed(KeyCode::Space) && character.grounded {
+        // pop off the ground by an unnoticeable amount so that ground detection won't immediately ground this character
+        transform.translation.y += 0.5;
         velocity.linvel.y = PlayerBundle::JUMP_FORCE;
     }
 }
