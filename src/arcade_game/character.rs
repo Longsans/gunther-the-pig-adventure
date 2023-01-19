@@ -37,6 +37,7 @@ impl From<EntityInstance> for CharacterBundle {
             ldtk::PLAYER_ID => Self {
                 moveable: Moveable {
                     speed: PlayerBundle::DEFAULT_MOVE_SPEED,
+                    moved: false,
                 },
                 collider_bundle: entity_instance.into(),
                 ..default()

@@ -1,4 +1,4 @@
-use crate::arcade_game::map::{BackgroundBundle, TerrainBundle};
+use crate::arcade_game::map::*;
 use crate::arcade_game::player::PlayerBundle;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
@@ -8,6 +8,8 @@ pub const MAP_PATH: &str = "map.ldtk";
 pub const PLAYER_ID: &str = "Player";
 
 pub const TERRAIN: i32 = 1;
+pub const UPHILL_TERRAIN: i32 = 8;
+pub const DOWNHILL_TERRAIN: i32 = 9;
 pub const FLORA: i32 = 2;
 pub const TILE_ON_TOP: i32 = 3;
 pub const PLANT_FOOT: i32 = 4;
@@ -22,6 +24,8 @@ impl Plugin for LdtkMapBackendPlugin {
         app.add_plugin(LdtkPlugin)
             .insert_resource(LevelSelection::Index(0))
             .register_ldtk_int_cell::<TerrainBundle>(TERRAIN)
+            .register_ldtk_int_cell::<UphillTerrainBundle>(UPHILL_TERRAIN)
+            .register_ldtk_int_cell::<DownhillTerrainBundle>(DOWNHILL_TERRAIN)
             .register_ldtk_int_cell::<TerrainBundle>(PLATFORM)
             .register_ldtk_int_cell::<TerrainBundle>(PLATFORM_PATTERN)
             .register_ldtk_int_cell::<BackgroundBundle>(FLORA)

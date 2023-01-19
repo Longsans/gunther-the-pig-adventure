@@ -1,8 +1,9 @@
 use crate::arcade_game::character::*;
 use crate::arcade_game::combat::{Damage, HitPoint};
-use crate::arcade_game::physics::{Moveable, PhysicsSystem};
+use crate::arcade_game::physics::{self, Moveable, PhysicsSystem};
 use crate::arcade_game::GameSystem;
 use bevy::prelude::*;
+use bevy::sprite::MaterialMesh2dBundle;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -10,20 +11,23 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-            .add_plugin(RapierDebugRenderPlugin::default())
-            .add_system_set(
-                SystemSet::new().with_system(
+        app.add_system(add_weapon_trajectory).add_system_set(
+            SystemSet::new()
+                .with_system(update_grounded_status.before(GameSystem::Input))
+                .with_system(
                     handle_input
                         .label(GameSystem::Input)
                         .label(PhysicsSystem::Local),
                 ),
-            );
+        );
     }
 }
 
 #[derive(Component, Default)]
 struct Player;
+
+#[derive(Component, Default)]
+struct PlayerChild;
 
 #[derive(Bundle, LdtkEntity)]
 pub struct PlayerBundle {
@@ -53,6 +57,7 @@ impl Default for PlayerBundle {
             character_bundle: CharacterBundle {
                 moveable: Moveable {
                     speed: PlayerBundle::DEFAULT_MOVE_SPEED,
+                    moved: false,
                 },
                 ..default()
             },
@@ -66,39 +71,97 @@ impl PlayerBundle {
     pub const DEFAULT_MOVE_SPEED: f32 = 50.0;
     pub const DEFAULT_TRANSFORM: Transform = Transform::IDENTITY;
     pub const JUMP_FORCE: f32 = 50.0;
+    pub const WEAPON_TRAJEC_LEN: f32 = 30.0;
+    pub const WEAPON_TRAJEC_ROT: f32 = 30.0;
+    pub const WEAPON_TRAJEC_MAX_ROT: f32 = 60.0;
+    pub const WEAPON_TRAJEC_MIN_ROT: f32 = -60.0;
+}
+
+fn add_weapon_trajectory(
+    player: Query<Entity, Added<Player>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut commands: Commands,
+) {
+    for entity in &player {
+        commands.entity(entity).with_children(|child_builder| {
+            child_builder
+                .spawn((
+                    SpatialBundle {
+                        transform: Transform::from_translation(-0.2 * Vec3::Z),
+                        ..default()
+                    },
+                    PlayerChild,
+                ))
+                .with_children(|inner_child_builder| {
+                    inner_child_builder.spawn(MaterialMesh2dBundle {
+                        mesh: meshes
+                            .add(shape::Box::new(PlayerBundle::WEAPON_TRAJEC_LEN, 0.2, 0.01).into())
+                            .into(),
+                        material: materials.add(ColorMaterial::from(Color::RED)).into(),
+                        transform: Transform::from_translation(
+                            -PlayerBundle::WEAPON_TRAJEC_LEN / 2.0 * Vec3::X,
+                        ),
+                        ..default()
+                    });
+                });
+        });
+    }
 }
 
 fn handle_input(
     kb_input: Res<Input<KeyCode>>,
+    time: Res<Time>,
     mut player: Query<
         (
-            &Moveable,
+            &mut Moveable,
             &mut Character,
             &mut Transform,
             &mut Velocity,
             &mut TextureAtlasSprite,
         ),
-        With<Player>,
+        (With<Player>, Without<PlayerChild>),
     >,
+    mut child_sprites: Query<&mut Transform, With<PlayerChild>>,
 ) {
     if player.is_empty() {
         return;
     }
     let (moveable, character, mut transform, mut velocity, mut sprite) = player.single_mut();
-    // velocity.linvel.x = 0.0;
-    let mut movement = 0.0;
+
+    velocity.linvel.x = 0.0;
     if kb_input.pressed(KeyCode::A) || kb_input.pressed(KeyCode::Left) {
-        // velocity.linvel.x -= moveable.speed;
-        movement -= moveable.speed * 0.005;
+        velocity.linvel.x -= moveable.speed;
     }
     if kb_input.pressed(KeyCode::D) || kb_input.pressed(KeyCode::Right) {
-        // velocity.linvel.x += moveable.speed;
-        movement += moveable.speed * 0.005;
+        velocity.linvel.x += moveable.speed;
     }
-    if transform.translation.x != 0.0 {
-        turn_player_direction(&mut sprite, movement * Vec2::X);
-        // turn_player_direction(&mut sprite, velocity.linvel);
-        transform.translation.x += movement;
+    for mut child_transform in &mut child_sprites {
+        let curr_z = child_transform.rotation.to_euler(EulerRot::YXZ).2;
+        if velocity.linvel.x != 0.0 {
+            let moved_right = velocity.linvel.x > 0.0;
+            sprite.flip_x = moved_right;
+            let moved_right = if moved_right { 1.0 } else { 0.0 };
+
+            child_transform.rotation = Quat::from_euler(
+                EulerRot::YXZ,
+                moved_right * std::f32::consts::PI,
+                0.0,
+                curr_z,
+            );
+        }
+        let mut rot_delta = 0.0;
+        if kb_input.pressed(KeyCode::W) || kb_input.pressed(KeyCode::Up) {
+            rot_delta = time.delta_seconds() * f32::to_radians(-PlayerBundle::WEAPON_TRAJEC_ROT);
+        }
+        if kb_input.pressed(KeyCode::S) || kb_input.pressed(KeyCode::Down) {
+            rot_delta = time.delta_seconds() * f32::to_radians(PlayerBundle::WEAPON_TRAJEC_ROT);
+        }
+        child_transform.rotate_local_z(f32::clamp(
+            rot_delta,
+            PlayerBundle::WEAPON_TRAJEC_MIN_ROT + curr_z,
+            PlayerBundle::WEAPON_TRAJEC_MAX_ROT - curr_z,
+        ));
     }
 
     if kb_input.just_pressed(KeyCode::Space) && character.grounded {
@@ -108,6 +171,20 @@ fn handle_input(
     }
 }
 
-fn turn_player_direction(sprite: &mut TextureAtlasSprite, heading_toward: Vec2) {
-    sprite.flip_x = heading_toward.x > 0.;
+fn update_grounded_status(
+    mut velocities: Query<(&GlobalTransform, &Collider, Option<&mut Character>)>,
+    rapier_context: Res<RapierContext>,
+) {
+    for (g_transform, collider, character) in &mut velocities {
+        if physics::detect_grounded(&rapier_context, g_transform, collider) {
+            if let Some(mut character) = character {
+                character.grounded = true;
+            }
+            continue;
+        } else {
+            if let Some(mut character) = character {
+                character.grounded = false;
+            }
+        }
+    }
 }
