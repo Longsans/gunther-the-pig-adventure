@@ -6,12 +6,6 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-#[derive(SystemLabel)]
-pub enum PhysicsSystem {
-    Local,
-    // GlobalSimulation,
-}
-
 pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {

@@ -1,6 +1,6 @@
 use crate::arcade_game::character::*;
 use crate::arcade_game::combat::{Damage, HitPoint};
-use crate::arcade_game::physics::{self, Moveable, PhysicsSystem};
+use crate::arcade_game::physics::{self, Moveable};
 use crate::arcade_game::GameSystem;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
@@ -17,17 +17,20 @@ impl Plugin for PlayerPlugin {
                 .with_system(
                     handle_input
                         .label(GameSystem::Input)
-                        .label(PhysicsSystem::Local),
+                        .label(GameSystem::Movement),
                 ),
         );
     }
 }
 
-#[derive(Component, Default)]
-struct Player;
+#[derive(Component)]
+pub struct Player {
+    pub projectile_angle: f32,
+    pub forward: Vec2,
+}
 
 #[derive(Component, Default)]
-struct PlayerChild;
+pub struct PlayerChild;
 
 #[derive(Bundle, LdtkEntity)]
 pub struct PlayerBundle {
@@ -43,6 +46,15 @@ pub struct PlayerBundle {
     dmg: Damage,
 }
 
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            projectile_angle: 0.0,
+            forward: Vec2::NEG_X,
+        }
+    }
+}
+
 impl Default for PlayerBundle {
     fn default() -> Self {
         Self {
@@ -53,7 +65,6 @@ impl Default for PlayerBundle {
             hp: HitPoint(100),
             dmg: Damage(10),
             name: Name::from(Self::DEFAULT_NAME),
-            player: Player,
             character_bundle: CharacterBundle {
                 moveable: Moveable {
                     speed: PlayerBundle::DEFAULT_MOVE_SPEED,
@@ -61,6 +72,7 @@ impl Default for PlayerBundle {
                 },
                 ..default()
             },
+            ..default()
         }
     }
 }
@@ -111,23 +123,18 @@ fn add_weapon_trajectory(
 
 fn handle_input(
     kb_input: Res<Input<KeyCode>>,
-    time: Res<Time>,
-    mut player: Query<
-        (
-            &mut Moveable,
-            &mut Character,
-            &mut Transform,
-            &mut Velocity,
-            &mut TextureAtlasSprite,
-        ),
-        (With<Player>, Without<PlayerChild>),
-    >,
-    mut child_sprites: Query<&mut Transform, With<PlayerChild>>,
+    mut player: Query<(
+        &mut Moveable,
+        &mut Player,
+        &mut Transform,
+        &mut Velocity,
+        &mut TextureAtlasSprite,
+    )>,
 ) {
     if player.is_empty() {
         return;
     }
-    let (moveable, character, mut transform, mut velocity, mut sprite) = player.single_mut();
+    let (moveable, mut player, mut transform, mut velocity, mut sprite) = player.single_mut();
 
     velocity.linvel.x = 0.0;
     if kb_input.pressed(KeyCode::A) || kb_input.pressed(KeyCode::Left) {
@@ -136,39 +143,16 @@ fn handle_input(
     if kb_input.pressed(KeyCode::D) || kb_input.pressed(KeyCode::Right) {
         velocity.linvel.x += moveable.speed;
     }
-    for mut child_transform in &mut child_sprites {
-        let curr_z = child_transform.rotation.to_euler(EulerRot::YXZ).2;
-        if velocity.linvel.x != 0.0 {
-            let moved_right = velocity.linvel.x > 0.0;
-            sprite.flip_x = moved_right;
-            let moved_right = if moved_right { 1.0 } else { 0.0 };
-
-            child_transform.rotation = Quat::from_euler(
-                EulerRot::YXZ,
-                moved_right * std::f32::consts::PI,
-                0.0,
-                curr_z,
-            );
-        }
-        let mut rot_delta = 0.0;
-        if kb_input.pressed(KeyCode::W) || kb_input.pressed(KeyCode::Up) {
-            rot_delta = time.delta_seconds() * f32::to_radians(-PlayerBundle::WEAPON_TRAJEC_ROT);
-        }
-        if kb_input.pressed(KeyCode::S) || kb_input.pressed(KeyCode::Down) {
-            rot_delta = time.delta_seconds() * f32::to_radians(PlayerBundle::WEAPON_TRAJEC_ROT);
-        }
-        child_transform.rotate_local_z(f32::clamp(
-            rot_delta,
-            PlayerBundle::WEAPON_TRAJEC_MIN_ROT + curr_z,
-            PlayerBundle::WEAPON_TRAJEC_MAX_ROT - curr_z,
-        ));
+    if velocity.linvel.x != 0.0 {
+        sprite.flip_x = velocity.linvel.x > 0.0;
+        player.forward = if velocity.linvel.x > 0.0 { 1.0 } else { -1.0 } * Vec2::X;
     }
 
-    if kb_input.just_pressed(KeyCode::Space) && character.grounded {
-        // pop off the ground by an unnoticeable amount so that ground detection won't immediately ground this character
-        transform.translation.y += 0.5;
-        velocity.linvel.y = PlayerBundle::JUMP_FORCE;
-    }
+    // if kb_input.just_pressed(KeyCode::Space) && character.grounded {
+    //     // pop off the ground by an unnoticeable amount so that ground detection won't immediately ground this character
+    //     transform.translation.y += 0.5;
+    //     velocity.linvel.y = PlayerBundle::JUMP_FORCE;
+    // }
 }
 
 fn update_grounded_status(

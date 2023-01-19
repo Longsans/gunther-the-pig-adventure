@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use character::CharacterPlugin;
+use combat::CombatPlugin;
 use ldtk::LdtkMapBackendPlugin;
 use physics::PhysicsPlugin;
 use player::PlayerPlugin;
@@ -12,6 +13,7 @@ mod ldtk;
 mod map;
 mod physics;
 mod player;
+mod projectile;
 
 const CLEAR_COLOR: Color = Color::BLACK;
 
@@ -19,6 +21,8 @@ const CLEAR_COLOR: Color = Color::BLACK;
 #[allow(dead_code)]
 enum GameSystem {
     Input,
+    Movement,
+    Combat,
     Physics,
 }
 
@@ -30,6 +34,7 @@ impl Plugin for ArcadeGame {
             .add_plugin(LdtkMapBackendPlugin)
             .add_plugin(CharacterPlugin)
             .add_plugin(PlayerPlugin)
+            .add_plugin(CombatPlugin)
             .add_plugin(PhysicsPlugin)
             .insert_resource(ClearColor(CLEAR_COLOR))
             .add_startup_system(spawn_camera);
