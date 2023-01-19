@@ -1,25 +1,15 @@
 use crate::arcade_game::ldtk;
 use crate::arcade_game::physics::*;
-use crate::arcade_game::player::PlayerBundle;
+use crate::arcade_game::player::prelude::PlayerBundle;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
-
-pub struct CharacterPlugin;
-
-impl Plugin for CharacterPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Character>();
-    }
-}
 
 pub const CHARACTER_SIZE: Vec2 = Vec2 { x: 8., y: 8. };
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-pub struct Character {
-    pub grounded: bool,
-}
+pub struct Character;
 
 #[derive(Bundle, Default, LdtkEntity)]
 pub struct CharacterBundle {
@@ -28,7 +18,7 @@ pub struct CharacterBundle {
     #[from_entity_instance]
     #[bundle]
     pub collider_bundle: DynamicColliderBundle,
-    pub velocity: Velocity,
+    pub controller: KinematicCharacterController,
 }
 
 impl From<EntityInstance> for CharacterBundle {

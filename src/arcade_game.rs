@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use character::CharacterPlugin;
 use combat::CombatPlugin;
 use ldtk::LdtkMapBackendPlugin;
 use physics::PhysicsPlugin;
@@ -13,7 +12,6 @@ mod ldtk;
 mod map;
 mod physics;
 mod player;
-mod projectile;
 
 const CLEAR_COLOR: Color = Color::BLACK;
 
@@ -23,7 +21,6 @@ enum GameSystem {
     Input,
     Movement,
     Combat,
-    Physics,
 }
 
 pub struct ArcadeGame;
@@ -32,7 +29,6 @@ impl Plugin for ArcadeGame {
     fn build(&self, app: &mut App) {
         app.add_plugin(WorldInspectorPlugin)
             .add_plugin(LdtkMapBackendPlugin)
-            .add_plugin(CharacterPlugin)
             .add_plugin(PlayerPlugin)
             .add_plugin(CombatPlugin)
             .add_plugin(PhysicsPlugin)

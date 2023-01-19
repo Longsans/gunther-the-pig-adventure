@@ -1,5 +1,5 @@
 use crate::arcade_game::map::*;
-use crate::arcade_game::player::PlayerBundle;
+use crate::arcade_game::player::prelude::PlayerBundle;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 

@@ -1,7 +1,7 @@
 use crate::arcade_game::character;
 use crate::arcade_game::ldtk;
 use crate::arcade_game::map;
-use crate::arcade_game::player::PlayerBundle;
+use crate::arcade_game::player::prelude::PlayerBundle;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -37,6 +37,7 @@ pub struct DynamicColliderBundle {
     pub rigid_body: RigidBody,
     pub locked_axes: LockedAxes,
     pub gravity_scale: GravityScale,
+    pub collision_groups: CollisionGroups,
 }
 
 #[derive(Bundle, Default, LdtkIntCell)]
@@ -44,6 +45,29 @@ pub struct StaticColliderBundle {
     pub collider: Collider,
     pub friction: Friction,
     pub locked_axes: LockedAxes,
+    pub collision_groups: CollisionGroups,
+}
+
+impl StaticColliderBundle {
+    pub fn collision_groups() -> CollisionGroups {
+        CollisionGroups::new(Group::GROUP_2, Group::GROUP_1 | Group::GROUP_3)
+    }
+}
+
+impl DynamicColliderBundle {
+    pub fn player_collision_groups() -> CollisionGroups {
+        CollisionGroups {
+            memberships: Group::GROUP_1,
+            filters: Group::GROUP_2,
+        }
+    }
+
+    pub fn proj_collision_groups() -> CollisionGroups {
+        CollisionGroups {
+            memberships: Group::GROUP_3,
+            filters: Group::GROUP_2 | Group::GROUP_3,
+        }
+    }
 }
 
 impl From<IntGridCell> for StaticColliderBundle {
@@ -53,11 +77,13 @@ impl From<IntGridCell> for StaticColliderBundle {
             coefficient: 0.0,
             ..default()
         };
+        let collision_groups = StaticColliderBundle::collision_groups();
         match cell.value {
             ldtk::TERRAIN | ldtk::PLATFORM | ldtk::PLATFORM_PATTERN => Self {
                 collider: Collider::cuboid(terrain_half_extents.x, terrain_half_extents.y),
                 locked_axes: LockedAxes::ROTATION_LOCKED,
                 friction: def_fric,
+                collision_groups,
             },
             ldtk::UPHILL_TERRAIN => Self {
                 collider: Collider::triangle(
@@ -67,6 +93,7 @@ impl From<IntGridCell> for StaticColliderBundle {
                 ),
                 locked_axes: LockedAxes::ROTATION_LOCKED,
                 friction: def_fric,
+                collision_groups,
             },
             ldtk::DOWNHILL_TERRAIN => Self {
                 collider: Collider::triangle(
@@ -76,6 +103,7 @@ impl From<IntGridCell> for StaticColliderBundle {
                 ),
                 locked_axes: LockedAxes::ROTATION_LOCKED,
                 friction: def_fric,
+                collision_groups,
             },
             _ => Self::default(),
         }
@@ -95,32 +123,10 @@ impl From<EntityInstance> for DynamicColliderBundle {
                     ..default()
                 },
                 gravity_scale: GravityScale(GRAVITY_SCALE),
+                collision_groups: DynamicColliderBundle::player_collision_groups(),
+                ..default()
             },
             _ => Self::default(),
         }
-    }
-}
-
-pub fn detect_grounded(
-    rapier_context: &RapierContext,
-    g_transform: &GlobalTransform,
-    collider: &Collider,
-) -> bool {
-    if let Some(cube) = collider.as_cuboid() {
-        let shape_pos =
-            g_transform.translation().clone().truncate() - (cube.half_extents().y + 0.1) * Vec2::Y;
-        let shape = Collider::cuboid(cube.half_extents().x, 0.01);
-        let max_toi = 0.001;
-        let shape_vel = max_toi * Vec2::Y;
-        let filter = QueryFilter::default();
-
-        if let Some(_) =
-            rapier_context.cast_shape(shape_pos, 0.0, shape_vel, &shape, max_toi, filter)
-        {
-            return true;
-        }
-        return false;
-    } else {
-        return false;
     }
 }
