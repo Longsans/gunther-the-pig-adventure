@@ -1,5 +1,6 @@
 use crate::arcade_game::map::*;
 use crate::arcade_game::player::prelude::PlayerBundle;
+use crate::arcade_game::MapLevel;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 
@@ -32,17 +33,29 @@ impl Plugin for LdtkMapBackendPlugin {
             .register_ldtk_int_cell::<BackgroundBundle>(TILE_ON_TOP)
             .register_ldtk_int_cell::<BackgroundBundle>(PLANT_FOOT)
             .register_ldtk_int_cell::<BackgroundBundle>(CHAIN)
-            .register_ldtk_entity::<PlayerBundle>(PLAYER_ID)
-            .add_startup_system(setup);
+            .register_ldtk_entity::<PlayerBundle>(PLAYER_ID);
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
+pub fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut map_level: ResMut<MapLevel>,
+) {
+    let level_entity = commands
         .spawn(LdtkWorldBundle {
             ldtk_handle: asset_server.load(MAP_PATH),
             transform: Transform::from_xyz(-128.0, -128.0, 0.0),
             ..default()
         })
-        .insert(Name::from("LDtk World"));
+        .insert(Name::from("LDtk World"))
+        .id();
+    map_level.entity = Some(level_entity);
+}
+
+pub fn cleanup(mut commands: Commands, mut map_level: ResMut<MapLevel>) {
+    if let Some(entity) = map_level.entity {
+        commands.entity(entity).despawn_recursive();
+        map_level.entity = None;
+    }
 }

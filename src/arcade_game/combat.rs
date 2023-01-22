@@ -1,6 +1,7 @@
-use crate::arcade_game::GameSystem;
+use crate::arcade_game::{GameState, GameSystem};
 use bevy::prelude::*;
 use components::*;
+use iyes_loopless::prelude::*;
 use systems::*;
 
 pub mod components;
@@ -14,24 +15,30 @@ impl Plugin for CombatPlugin {
         app.insert_resource(ProjectileSpriteIndex(DEFAULT_PROJECTILE_INDEX))
             .insert_resource(SpriteSheetHandle::default())
             .add_startup_system(setup)
-            .add_system_set(
-                SystemSet::new()
+            .add_system(
+                aim_weapon
+                    .run_in_state(GameState::InGame)
                     .label(GameSystem::Input)
                     .label(GameSystem::Combat)
-                    .after(GameSystem::Movement)
-                    .with_system(aim_weapon.label(CombatSystem::Aim))
-                    .with_system(
-                        fire_projectile
-                            .label(CombatSystem::Engage)
-                            .after(CombatSystem::Aim),
-                    ),
+                    .label(CombatSystem::Aim)
+                    .after(GameSystem::Movement),
+            )
+            .add_system(
+                fire_projectile
+                    .run_in_state(GameState::InGame)
+                    .label(GameSystem::Input)
+                    .label(GameSystem::Combat)
+                    .label(CombatSystem::Engage)
+                    .after(CombatSystem::Aim),
             )
             .add_system_set(
-                SystemSet::new()
+                ConditionSet::new()
+                    .run_in_state(GameState::InGame)
                     .label(GameSystem::Combat)
                     .label(CombatSystem::Result)
                     .after(CombatSystem::Engage)
-                    .with_system(deal_projectile_effect),
+                    .with_system(deal_projectile_effect)
+                    .into(),
             );
     }
 }
