@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 
-use crate::arcade_game::physics::StaticColliderBundle;
+use crate::arcade_game::physics::prelude::*;
 
 pub const TILE_SIZE: Vec2 = Vec2 { x: 8., y: 8. };
 

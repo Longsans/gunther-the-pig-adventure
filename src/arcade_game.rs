@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use combat::CombatPlugin;
 use iyes_loopless::prelude::*;
 use ldtk::LdtkMapBackendPlugin;
-use physics::PhysicsPlugin;
+use physics::{events::*, PhysicsPlugin};
 use player::PlayerPlugin;
 use ui::{main_menu, pause_menu, UIPlugin};
 
@@ -21,11 +21,8 @@ pub struct ArcadeGame;
 impl Plugin for ArcadeGame {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(CLEAR_COLOR))
-            .insert_resource(ExitedMainMenu(false))
-            .insert_resource(ExitedGameToMenu(false))
             .insert_resource(MapLevel::default())
             .add_loopless_state(GameState::MainMenu)
-            // .add_plugin(WorldInspectorPlugin)
             .add_plugin(UIPlugin)
             .add_plugin(LdtkMapBackendPlugin)
             .add_plugin(PlayerPlugin)
@@ -41,12 +38,15 @@ impl Plugin for ArcadeGame {
             // main menu -> map transition
             .add_exit_system(GameState::Pause, ldtk::cleanup.run_if(cleanup_requested))
             //
-            // menu states
+            // menu transitions
             .add_enter_system(GameState::MainMenu, main_menu::spawn_menu)
             .add_exit_system(GameState::MainMenu, main_menu::despawn_menu)
             .add_enter_system(GameState::Pause, pause_menu::spawn_menu)
             .add_exit_system(GameState::Pause, pause_menu::despawn_menu)
-            .add_system(handle_state_input.run_in_state(GameState::InGame));
+            //
+            // pause <-> ingame transition
+            .add_system(handle_to_pause_input.run_in_state(GameState::InGame))
+            .add_system(handle_to_ingame_input.run_in_state(GameState::Pause));
     }
 }
 
@@ -71,12 +71,6 @@ enum GameState {
 pub struct CleanupMapEvent;
 pub struct SetupMapEvent;
 
-#[derive(Resource)]
-pub struct ExitedMainMenu(bool);
-
-#[derive(Resource)]
-pub struct ExitedGameToMenu(bool);
-
 #[derive(Resource, Default)]
 pub struct MapLevel {
     entity: Option<Entity>,
@@ -94,10 +88,34 @@ fn cleanup_requested(ev_cleanup: EventReader<CleanupMapEvent>) -> bool {
     res
 }
 
-fn handle_state_input(input: Res<Input<KeyCode>>, mut commands: Commands) {
+fn handle_to_pause_input(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    mut ev_freeze: EventWriter<FreezePhysicsEvent>,
+) {
     if input.just_pressed(KeyCode::Escape) {
-        commands.insert_resource(NextState(GameState::Pause));
+        pause_game(&mut commands, &mut ev_freeze);
     }
+}
+
+fn handle_to_ingame_input(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    mut ev_unfreeze: EventWriter<UnfreezePhysicsEvent>,
+) {
+    if input.just_pressed(KeyCode::Escape) {
+        resume_game(&mut commands, &mut ev_unfreeze);
+    }
+}
+
+pub fn pause_game(commands: &mut Commands, ev_freeze: &mut EventWriter<FreezePhysicsEvent>) {
+    commands.insert_resource(NextState(GameState::Pause));
+    ev_freeze.send(FreezePhysicsEvent);
+}
+
+pub fn resume_game(commands: &mut Commands, ev_unfreeze: &mut EventWriter<UnfreezePhysicsEvent>) {
+    commands.insert_resource(NextState(GameState::InGame));
+    ev_unfreeze.send(UnfreezePhysicsEvent);
 }
 
 fn spawn_camera(mut commands: Commands) {

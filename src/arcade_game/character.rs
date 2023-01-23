@@ -1,5 +1,5 @@
 use crate::arcade_game::ldtk;
-use crate::arcade_game::physics::*;
+use crate::arcade_game::physics::prelude::*;
 use crate::arcade_game::player::prelude::PlayerBundle;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
@@ -19,16 +19,14 @@ pub struct CharacterBundle {
     #[bundle]
     pub collider_bundle: DynamicColliderBundle,
     pub controller: KinematicCharacterController,
+    pub velocity: Velocity,
 }
 
 impl From<EntityInstance> for CharacterBundle {
     fn from(entity_instance: EntityInstance) -> Self {
         match entity_instance.identifier.as_ref() {
             ldtk::PLAYER_ID => Self {
-                moveable: Moveable {
-                    speed: PlayerBundle::DEFAULT_MOVE_SPEED,
-                    moved: false,
-                },
+                moveable: Moveable::new(PlayerBundle::DEFAULT_MOVE_SPEED),
                 collider_bundle: entity_instance.into(),
                 ..default()
             },

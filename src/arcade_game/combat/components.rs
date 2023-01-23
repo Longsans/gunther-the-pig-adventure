@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use crate::arcade_game::physics::DynamicColliderBundle;
-use crate::arcade_game::physics::Moveable;
+use crate::arcade_game::physics::prelude::*;
 
 #[derive(SystemLabel)]
 pub enum CombatSystem {

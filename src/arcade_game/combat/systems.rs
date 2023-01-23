@@ -6,8 +6,7 @@ use rand;
 use rand::Rng;
 
 use super::components::*;
-use crate::arcade_game::physics::DynamicColliderBundle;
-use crate::arcade_game::physics::Moveable;
+use crate::arcade_game::physics::prelude::*;
 
 fn dir_to_sign(dir: &Vec2) -> f32 {
     if dir.x > 0.0 {
@@ -104,10 +103,7 @@ pub fn fire_projectile(
                     collision_groups: DynamicColliderBundle::proj_collision_groups(),
                     ..default()
                 },
-                moveable: Moveable {
-                    speed: Projectile::DEFAULT_SPEED,
-                    ..default()
-                },
+                moveable: Moveable::new(Projectile::DEFAULT_SPEED),
                 projectile: Projectile { fx_radius: 1 },
                 velocity: Velocity {
                     linvel: Projectile::DEFAULT_SPEED

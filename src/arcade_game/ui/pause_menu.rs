@@ -1,9 +1,9 @@
 use super::{components::*, *};
-use crate::arcade_game::CleanupMapEvent;
+use crate::arcade_game::{self, physics::events::UnfreezePhysicsEvent, CleanupMapEvent};
 use iyes_loopless::state::NextState;
 use kayak_ui::prelude::widgets::*;
 
-pub fn spawn_menu(mut commands: Commands, preload_resource: Res<PreloadResource>) {
+pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
     let mut widget_context = KayakRootContext::new();
     widget_context.add_plugin(KayakWidgetsContextPlugin);
     widget_context.add_widget_data::<MenuButton, ButtonState>();
@@ -40,9 +40,10 @@ pub fn spawn_menu(mut commands: Commands, preload_resource: Res<PreloadResource>
             Event,
             Entity,
         )>,
-              mut commands: Commands| {
+              mut commands: Commands,
+              mut ev_unfreeze: EventWriter<UnfreezePhysicsEvent>| {
             match event.event_type {
-                EventType::Click(..) => commands.insert_resource(NextState(GameState::InGame)),
+                EventType::Click(..) => arcade_game::resume_game(&mut commands, &mut ev_unfreeze),
                 _ => {}
             }
             (event_dispatcher_context, event)
@@ -54,47 +55,36 @@ pub fn spawn_menu(mut commands: Commands, preload_resource: Res<PreloadResource>
         <KayakAppBundle>
             <NinePatchBundle
                 nine_patch={NinePatch {
-                    handle: preload_resource.images[0].clone(),
-                    border: Edge::all(25.0),
+                    handle: ui_assets.images[super::PANEL_INDEX].clone(),
+                    border: Edge::all(15.0),
                 }}
                 styles={KStyle {
-                    width: Units::Pixels(350.0).into(),
-                    height: Units::Pixels(512.0).into(),
+                    width: Units::Pixels(420.0).into(),
+                    height: Units::Pixels(400.0).into(),
                     left: Units::Stretch(1.0).into(),
                     right: Units::Stretch(1.0).into(),
                     top: Units::Stretch(1.0).into(),
                     bottom: Units::Stretch(1.0).into(),
                     padding: Edge::new(
-                        Units::Pixels(20.0),
+                        Units::Pixels(60.0),
                         Units::Pixels(20.0),
                         Units::Pixels(50.0),
                         Units::Pixels(20.0),
                     ).into(),
+                    row_between: Units::Pixels(20.0).into(),
                     ..KStyle::default()
                 }}
             >
-                <KImageBundle
-                    image={KImage(preload_resource.images[1].clone())}
-                    styles={KStyle {
-                        width: Units::Pixels(310.0).into(),
-                        height: Units::Pixels(104.0).into(),
-                        top: Units::Pixels(25.0).into(),
-                        bottom: Units::Pixels(25.0).into(),
-                        ..KStyle::default()
-                    }}
-                />
                 <TextWidgetBundle
                     text={TextProps {
                         content: "Paused".into(),
                         alignment: Alignment::Middle,
                         size: 28.0,
+                        line_height: Some(60.0),
                         ..Default::default()
                     }}
                     styles={KStyle {
-                        width: Units::Pixels(310.0).into(),
-                        height: Units::Pixels(78.0).into(),
-                        top: Units::Stretch(0.6).into(),
-                        bottom: Units::Stretch(0.4).into(),
+                        width: Units::Stretch(1.0).into(),
                         ..KStyle::default()
                     }}
                 />

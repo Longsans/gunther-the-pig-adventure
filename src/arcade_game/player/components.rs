@@ -1,6 +1,6 @@
 use crate::arcade_game::character::*;
 use crate::arcade_game::combat::prelude::*;
-use crate::arcade_game::physics::Moveable;
+use crate::arcade_game::physics::prelude::*;
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 
@@ -47,10 +47,7 @@ impl Default for PlayerBundle {
             dmg: Damage(10),
             name: Name::from(Self::DEFAULT_NAME),
             character_bundle: CharacterBundle {
-                moveable: Moveable {
-                    speed: PlayerBundle::DEFAULT_MOVE_SPEED,
-                    moved: false,
-                },
+                moveable: Moveable::new(PlayerBundle::DEFAULT_MOVE_SPEED),
                 ..default()
             },
             ..default()

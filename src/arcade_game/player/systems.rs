@@ -1,4 +1,4 @@
-use crate::arcade_game::physics::Moveable;
+use crate::arcade_game::physics::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_rapier2d::prelude::*;
