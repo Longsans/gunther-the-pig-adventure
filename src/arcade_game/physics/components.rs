@@ -51,29 +51,6 @@ impl Moveable {
             frozen_g_scale: 1.0,
         }
     }
-
-    pub fn freeze_velocity(&mut self, velocity: &mut Velocity) {
-        self.frozen_speed = self.speed;
-        self.frozen_linvel = velocity.linvel;
-        self.frozen_angvel = velocity.angvel;
-        velocity.linvel = Vec2::ZERO;
-        velocity.angvel = 0.0;
-    }
-
-    pub fn freeze_gravity(&mut self, g_scale: &mut GravityScale) {
-        self.frozen_g_scale = g_scale.0;
-        g_scale.0 = 0.0;
-    }
-
-    pub fn unfreeze_velocity(&mut self, velocity: &mut Velocity) {
-        self.speed = self.frozen_speed;
-        velocity.linvel = self.frozen_linvel;
-        velocity.angvel = self.frozen_angvel;
-    }
-
-    pub fn unfreeze_gravity(&mut self, g_scale: &mut GravityScale) {
-        g_scale.0 = self.frozen_g_scale;
-    }
 }
 
 impl StaticColliderBundle {

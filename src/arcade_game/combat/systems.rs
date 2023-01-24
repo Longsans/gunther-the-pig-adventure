@@ -192,3 +192,9 @@ fn despawn_nearby_tiles(
         }
     }
 }
+
+pub fn cleanup_projectiles(projectiles: Query<Entity, With<Projectile>>, mut commands: Commands) {
+    for projectile in &projectiles {
+        commands.entity(projectile).despawn_recursive();
+    }
+}

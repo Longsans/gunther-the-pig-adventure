@@ -1,6 +1,5 @@
 use super::{components::*, *};
-use crate::arcade_game::{self, physics::events::UnfreezePhysicsEvent, CleanupMapEvent};
-use iyes_loopless::state::NextState;
+use crate::arcade_game::{self, physics::events::UnfreezePhysicsEvent, CleanupSceneEvent};
 use kayak_ui::prelude::widgets::*;
 
 pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
@@ -20,13 +19,10 @@ pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
             Event,
             Entity,
         )>,
-              mut commands: Commands,
-              mut ev_writer_cleanup: EventWriter<CleanupMapEvent>| {
+              commands: Commands,
+              ev_writer_cleanup: EventWriter<CleanupSceneEvent>| {
             match event.event_type {
-                EventType::Click(..) => {
-                    commands.insert_resource(NextState(GameState::MainMenu));
-                    ev_writer_cleanup.send(CleanupMapEvent);
-                }
+                EventType::Click(..) => arcade_game::quit_to_main_menu(commands, ev_writer_cleanup),
                 _ => {}
             }
             (event_dispatcher_context, event)
@@ -41,9 +37,9 @@ pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
             Entity,
         )>,
               mut commands: Commands,
-              mut ev_unfreeze: EventWriter<UnfreezePhysicsEvent>| {
+              ev_unfreeze: EventWriter<UnfreezePhysicsEvent>| {
             match event.event_type {
-                EventType::Click(..) => arcade_game::resume_game(&mut commands, &mut ev_unfreeze),
+                EventType::Click(..) => arcade_game::resume_game(&mut commands, ev_unfreeze),
                 _ => {}
             }
             (event_dispatcher_context, event)

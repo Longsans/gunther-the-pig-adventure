@@ -2,6 +2,7 @@ use crate::arcade_game::{GameState, GameSystem};
 use bevy::prelude::*;
 use components::*;
 use iyes_loopless::prelude::*;
+pub use systems::cleanup_projectiles;
 use systems::*;
 
 pub mod components;

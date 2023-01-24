@@ -1,7 +1,6 @@
 use super::{components::*, *};
-use crate::arcade_game::SetupMapEvent;
+use crate::arcade_game::{self, SetupSceneEvent};
 use bevy::app::AppExit;
-use iyes_loopless::state::NextState;
 use kayak_ui::prelude::widgets::*;
 
 pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
@@ -21,11 +20,9 @@ pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
             Event,
             Entity,
         )>,
-              mut exit: EventWriter<AppExit>| {
+              exit: EventWriter<AppExit>| {
             match event.event_type {
-                EventType::Click(..) => {
-                    exit.send(AppExit);
-                }
+                EventType::Click(..) => arcade_game::quit_game(exit),
                 _ => {}
             }
             (event_dispatcher_context, event)
@@ -39,13 +36,10 @@ pub fn spawn_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
             Event,
             Entity,
         )>,
-              mut commands: Commands,
-              mut ev_writer_setup: EventWriter<SetupMapEvent>| {
+              commands: Commands,
+              ev_writer_setup: EventWriter<SetupSceneEvent>| {
             match event.event_type {
-                EventType::Click(..) => {
-                    commands.insert_resource(NextState(GameState::InGame));
-                    ev_writer_setup.send(SetupMapEvent);
-                }
+                EventType::Click(..) => arcade_game::start_game(commands, ev_writer_setup),
                 _ => {}
             }
             (event_dispatcher_context, event)
