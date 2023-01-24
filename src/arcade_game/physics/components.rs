@@ -17,10 +17,6 @@ pub struct UnfreezePhysicsEvent;
 #[reflect(Component)]
 pub struct Moveable {
     pub speed: f32,
-    frozen_speed: f32,
-    frozen_linvel: Vec2,
-    frozen_angvel: f32,
-    frozen_g_scale: f32,
 }
 
 #[derive(Bundle, Default, LdtkIntCell)]
@@ -43,13 +39,7 @@ pub struct StaticColliderBundle {
 
 impl Moveable {
     pub fn new(speed: f32) -> Self {
-        Self {
-            speed,
-            frozen_speed: 0.0,
-            frozen_linvel: Vec2::ZERO,
-            frozen_angvel: 0.0,
-            frozen_g_scale: 1.0,
-        }
+        Self { speed }
     }
 }
 
